@@ -7,8 +7,9 @@
 class CloudNS {
 
     private $api_url = 'https://api.cloudns.net/';
-    var $auth_id;
-    var $auth_pass;
+    private $auth_id;
+    private $auth_pass;
+    private $domains = array();
 
     public function __construct( $auth_id = '', $auth_pass = '' ) {
     	$this->auth_id = $auth_id;
@@ -39,6 +40,29 @@ class CloudNS {
 
     public function get_dns_zones($page = 1, $rows_per_page = 100) {
         return $this->apiCall('dns/list-zones.json', "page={$page}&rows-per-page={$rows_per_page}");
+    }
+
+	/**
+	 * This function returns the domains and if it hasn't gotten the complete list 
+	 * then it does so at that time. 
+	 */
+    public function get_all_zones() {
+    	if (count($this->domains) == 0) {
+    		$this->update_domains();
+    	}
+    	return $this->domains;
+    }
+    private function update_domains() {
+    	$pages = $this->get_page_count();
+    	for ($i=1; $i<=$pages; $i++) {
+			$page_data = $this->get_dns_zones($i);
+			// if ($debug) echo "Page Data: <pre>" . print_r($page_data, true) . "</pre>";
+			foreach ($page_data as $page => $zone) {
+				if (!in_array($zone['name'], $this->domains)) {
+					$this->domains[] = $zone['name'];
+				}
+			}
+		}
     }
 
     public function get_zone_records($zone_name = '', $type = '') {
